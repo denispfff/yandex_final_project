@@ -16,7 +16,7 @@ type Server struct {
 
 func New(logger *log.Logger) *Server {
 	port, ok := os.LookupEnv("TODO_PORT")
-	if !ok {
+	if !ok || len(port) == 0 {
 		port = "7540"
 	}
 

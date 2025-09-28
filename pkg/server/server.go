@@ -3,7 +3,6 @@ package server
 import (
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -14,12 +13,7 @@ type Server struct {
 	HttpServer *http.Server
 }
 
-func New(logger *log.Logger) *Server {
-	port, ok := os.LookupEnv("TODO_PORT")
-	if !ok || len(port) == 0 {
-		port = "7540"
-	}
-
+func New(logger *log.Logger, port string) *Server {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir(webDir)))

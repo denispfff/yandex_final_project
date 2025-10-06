@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -25,29 +26,40 @@ func daysNextDate(now time.Time, dstartTime time.Time, params string) (time.Time
 	return dstartTime, nil
 }
 
-func weeksNextDate(now time.Time, params string) (time.Time, error) {
+func weeksNextDate(now time.Time, dstartTime time.Time, params string) (time.Time, error) {
 	if len(params) == 0 {
-		return now, nil
+		return now, fmt.Errorf("unexpected weekdays count: %d", len(params))
 	}
 
 	weekdays := strings.Split(params, ",")
-	nowWeekday := int(now.Weekday())
-
-	intWeekdays := make([]int, len(weekdays))
+	// Перегоняем строку в слайс интов для удобства
+	intWeekdays := []int{}
 	for _, str := range weekdays {
 		num, err := strconv.Atoi(str)
 		if err != nil {
 			return now, err
 		}
+		if num < 1 || num > 7 {
+			return now, fmt.Errorf("weekday %d out of range", num)
+		}
 		intWeekdays = append(intWeekdays, num)
 	}
+	// Порядок дней в params может быть случайным?
+	slices.Sort(intWeekdays)
+
+	startTime := dstartTime
+	// Если заданная дата уже наступила - ищем ближайший день недели
+	if dstartTime.Before(now) {
+		startTime = now
+	}
+	currentWeekday := int(startTime.Weekday())
 
 	for _, weekday := range intWeekdays {
-		if nowWeekday < weekday {
-			return now.AddDate(0, 0, weekday-nowWeekday), nil
+		if currentWeekday < weekday {
+			return startTime.AddDate(0, 0, weekday-currentWeekday), nil
 		}
 	}
-	return now.AddDate(0, 0, 7+intWeekdays[0]-nowWeekday), nil
+	return startTime.AddDate(0, 0, 7-currentWeekday+intWeekdays[0]), nil
 }
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
@@ -82,7 +94,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		nextTime = dstartTime
 
 	case "w":
-		nextTime, err = weeksNextDate(now, rule[1])
+		nextTime, err = weeksNextDate(now, dstartTime, rule[1])
 		if err != nil {
 			return "", err
 		}

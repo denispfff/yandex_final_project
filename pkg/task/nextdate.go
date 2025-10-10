@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const DateFormat = "20060102"
+
 func daysNextDate(now time.Time, dstartTime time.Time, params string) (time.Time, error) {
 	days, err := strconv.Atoi(string(params))
 	if err != nil {
@@ -64,11 +66,11 @@ func weeksNextDate(now time.Time, dstartTime time.Time, params string) (time.Tim
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	var nextTime time.Time
-	dstartTime, err := time.Parse("20060102", dstart)
+	dstartTime, err := time.Parse(DateFormat, dstart)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(repeat)
+
 	if len(repeat) == 0 {
 		return "", nil
 	}

@@ -7,8 +7,6 @@ import (
 	"yandex_final_project/pkg/task"
 )
 
-const DateFormat = "20060102"
-
 func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	if req.Method != http.MethodGet {
 		errText := "Method not allowed"
@@ -20,7 +18,7 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	date := req.FormValue("date")
 	repeat := req.FormValue("repeat")
 
-	nowDate, err := time.Parse(DateFormat, now)
+	nowDate, err := time.Parse(task.DateFormat, now)
 	if err != nil {
 		errText := "Invalid date format"
 		logger.Printf("%s: %v", errText, err)
@@ -45,5 +43,13 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		logger.Printf("%s: %v", errText, err)
 		http.Error(res, errText, http.StatusInternalServerError)
 		return
+	}
+}
+
+func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	switch req.Method {
+	//other methods
+	case http.MethodPost:
+		addTaskHandler(res, req, logger)
 	}
 }

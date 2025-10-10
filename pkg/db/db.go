@@ -34,7 +34,8 @@ func Init(dbFile string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	// Насколько понял из условия - соединение оставляем открытым, это странно
+	// defer db.Close()
 
 	if install {
 		_, err := db.Exec(schema)

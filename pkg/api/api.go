@@ -51,5 +51,8 @@ func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger)
 	//other methods
 	case http.MethodPost:
 		addTaskHandler(res, req, logger)
+	default:
+		errText := "Method Not Allowed"
+		http.Error(res, errText, http.StatusMethodNotAllowed)
 	}
 }

@@ -30,15 +30,13 @@ func Init(dbFile string) error {
 		install = true
 	}
 
-	db, err := sql.Open("sqlite", dbFile)
+	DB, err = sql.Open("sqlite", dbFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Насколько понял из условия - соединение оставляем открытым, это странно
-	// defer db.Close()
 
 	if install {
-		_, err := db.Exec(schema)
+		_, err := DB.Exec(schema)
 		if err != nil {
 			log.Fatal(err)
 		}

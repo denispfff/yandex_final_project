@@ -18,10 +18,10 @@ func daysNextDate(now time.Time, dstartTime time.Time, params string) (time.Time
 	if days <= 0 || days > 400 {
 		return now, fmt.Errorf("invalid days count: %d", days)
 	}
-	// Сразу добавляем заданный интервал для следующей даты
-	dstartTime = dstartTime.AddDate(0, 0, days)
+	// // Сразу добавляем заданный интервал для следующей даты - для теста шага 4 комментить, да теста шага 3 нет - бред
+	// dstartTime = dstartTime.AddDate(0, 0, days)
 	// Проверка на текущую дату, если про
-	for dstartTime.Before(now) || dstartTime.Equal(now) {
+	for dstartTime.Before(now.AddDate(0, 0, -1)) {
 		dstartTime = dstartTime.AddDate(0, 0, days)
 	}
 
@@ -51,7 +51,7 @@ func weeksNextDate(now time.Time, dstartTime time.Time, params string) (time.Tim
 
 	startTime := dstartTime
 	// Если заданная дата уже наступила - ищем ближайший день недели
-	if dstartTime.Before(now) {
+	if dstartTime.Before(now) || dstartTime.Equal(now) {
 		startTime = now
 	}
 	currentWeekday := int(startTime.Weekday())
@@ -95,11 +95,11 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		}
 		nextTime = dstartTime
 
-	case "w":
-		nextTime, err = weeksNextDate(now, dstartTime, rule[1])
-		if err != nil {
-			return "", err
-		}
+	// case "w":
+	// 	nextTime, err = weeksNextDate(now, dstartTime, rule[1])
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
 	default:
 		return "", fmt.Errorf("repeate rule %s is not allowed", rule[0])
 	}

@@ -9,6 +9,17 @@ import (
 	"yandex_final_project/pkg/task"
 )
 
+func jsonError(res http.ResponseWriter, errText string, logger *log.Logger) {
+	errorResponse := map[string]string{
+		"error": errText,
+	}
+
+	resErr := json.NewEncoder(res).Encode(errorResponse)
+	if resErr != nil {
+		logger.Printf("ошибка при сериализации ошибки")
+	}
+}
+
 func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	body := req.Body
 	defer body.Close()
@@ -18,14 +29,17 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "ошибка десериализации JSON"
 		logger.Printf("%s: %v", errText, err)
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	if newTask.Title == "" {
 		errText := "не указан заголовок задачи"
 		logger.Printf("%s", errText)
-		http.Error(res, errText, http.StatusBadRequest)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
+		return
 	}
 
 	if newTask.Date == "" {
@@ -37,14 +51,22 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		if err != nil {
 			errText := "invalid format "
 			logger.Printf("%s: %v", errText, err)
-			http.Error(res, errText, http.StatusBadRequest)
+			res.WriteHeader(http.StatusBadRequest)
+			jsonError(res, errText, logger)
+			return
 		}
 	} else {
-		_, err := time.Parse(task.DateFormat, newTask.Date)
+		date, err := time.Parse(task.DateFormat, newTask.Date)
 		if err != nil {
 			errText := "invalid date format "
 			logger.Printf("%s, %v", errText, err)
-			http.Error(res, errText, http.StatusBadRequest)
+			res.WriteHeader(http.StatusBadRequest)
+			jsonError(res, errText, logger)
+			return
+		}
+
+		if date.Before(time.Now()) {
+			newTask.Date = time.Now().Format(task.DateFormat)
 		}
 	}
 
@@ -53,7 +75,9 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "db add task error"
 		logger.Printf("%s: %v", errText, err)
-		http.Error(res, errText, http.StatusBadRequest)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
+		return
 	}
 
 	response := map[string]int64{
@@ -64,7 +88,8 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "Respone write error"
 		logger.Printf("%s: %v", errText, err)
-		http.Error(res, errText, http.StatusInternalServerError)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
 		return
 	}
 	res.Header().Set("Content-Type", "application/json")

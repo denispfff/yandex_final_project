@@ -9,24 +9,25 @@ import (
 	"yandex_final_project/pkg/task"
 )
 
-func writeJson(res http.ResponseWriter, data any) error {
-	res.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(res).Encode(data)
+func writeJson(res http.ResponseWriter, data any, logger *log.Logger) {
+	err := json.NewEncoder(res).Encode(data)
+	if err != nil {
+		logger.Printf("ошибка при сериализации ответа: %v", err)
+
+	}
 }
 
 func jsonError(res http.ResponseWriter, errText string, logger *log.Logger) {
 	errorResponse := map[string]string{
 		"error": errText,
 	}
-
 	res.WriteHeader(http.StatusBadRequest)
-	err := writeJson(res, errorResponse)
-	if err != nil {
-		logger.Printf("ошибка при сериализации ошибки: %v", err)
-	}
+	writeJson(res, errorResponse, logger)
 }
 
 func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	res.Header().Set("Content-Type", "application/json")
+
 	var newTask db.Task
 
 	body := req.Body
@@ -39,6 +40,7 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		errText := "что-то с текущим временем на сервере"
 		logger.Printf("%s: %v", errText, err)
 		jsonError(res, errText, logger)
+		return
 	}
 
 	err = json.NewDecoder(body).Decode(&newTask)
@@ -104,21 +106,22 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 			}
 		}
 
-		id, err := db.AddTask(&newTask)
-
-		if err != nil {
-			errText := "db add task error"
-			logger.Printf("%s: %v", errText, err)
-			jsonError(res, errText, logger)
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		response := map[string]int64{
-			"id": id,
-		}
-
-		writeJson(res, response)
-		res.WriteHeader(http.StatusCreated)
+		//
 	}
+
+	id, err := db.AddTask(&newTask)
+
+	if err != nil {
+		errText := "db add task error"
+		logger.Printf("%s: %v", errText, err)
+		jsonError(res, errText, logger)
+		return
+	}
+
+	response := map[string]int64{
+		"id": id,
+	}
+
+	writeJson(res, response, logger)
+	res.WriteHeader(http.StatusCreated)
 }

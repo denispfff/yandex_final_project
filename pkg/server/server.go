@@ -19,10 +19,9 @@ func New(logger *log.Logger, port string) *Server {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir(webDir)))
-	mux.HandleFunc("/api/nextdate", func(w http.ResponseWriter, r *http.Request) {
-		api.NextDateHandler(w, r, logger)
-	})
+	mux.HandleFunc("/api/nextdate", func(w http.ResponseWriter, r *http.Request) { api.NextDateHandler(w, r, logger) })
 	mux.HandleFunc("/api/task", func(w http.ResponseWriter, r *http.Request) { api.TaskHandler(w, r, logger) })
+	mux.HandleFunc("/api/tasks", func(w http.ResponseWriter, r *http.Request) { api.TasksHandler(w, r, logger) })
 
 	server := &http.Server{
 		Addr:         ":" + port,

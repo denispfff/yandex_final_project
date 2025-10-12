@@ -1,6 +1,11 @@
 package db
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+	"time"
+	"yandex_final_project/pkg/task"
+)
 
 type Task struct {
 	ID      string `json:"id" db:"id"`
@@ -23,4 +28,30 @@ func AddTask(task *Task) (int64, error) {
 		id, err = res.LastInsertId()
 	}
 	return id, err
+}
+
+func Tasks(limit int) ([]*Task, error) {
+	var tasks []*Task
+
+	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date >= :date order by date LIMIT :limit`
+	rows, err := DB.Query(query,
+		sql.Named("date", time.Now().Format(task.DateFormat)),
+		sql.Named("limit", limit))
+	if err != nil {
+		return nil, fmt.Errorf("query execute error: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var task Task
+
+		err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
+
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
 }

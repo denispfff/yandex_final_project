@@ -10,6 +10,13 @@ import (
 
 const DateFormat = "20060102"
 
+func AfterNow(date, now time.Time) bool {
+	todayString := now.Format(DateFormat)
+	today, _ := time.Parse(DateFormat, todayString)
+
+	return date.After(today)
+}
+
 func daysNextDate(now time.Time, dstartTime time.Time, params string) (time.Time, error) {
 	days, err := strconv.Atoi(string(params))
 	if err != nil {
@@ -21,9 +28,16 @@ func daysNextDate(now time.Time, dstartTime time.Time, params string) (time.Time
 	// // Сразу добавляем заданный интервал для следующей даты - для теста шага 4 комментить, да теста шага 3 нет - бред
 	// dstartTime = dstartTime.AddDate(0, 0, days)
 	// Проверка на текущую дату, если про
-	for dstartTime.Before(now.AddDate(0, 0, -1)) {
+	for {
 		dstartTime = dstartTime.AddDate(0, 0, days)
+		if AfterNow(dstartTime, now) {
+			break
+		}
 	}
+
+	// for dstartTime.Before(now.AddDate(0, 0, -2)) {
+	// 	dstartTime = dstartTime.AddDate(0, 0, days)
+	// }
 
 	return dstartTime, nil
 }
@@ -51,7 +65,8 @@ func weeksNextDate(now time.Time, dstartTime time.Time, params string) (time.Tim
 
 	startTime := dstartTime
 	// Если заданная дата уже наступила - ищем ближайший день недели
-	if dstartTime.Before(now) || dstartTime.Equal(now) {
+
+	if AfterNow(dstartTime, now) {
 		startTime = now
 	}
 	currentWeekday := int(startTime.Weekday())

@@ -3,8 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"time"
-	"yandex_final_project/pkg/task"
 )
 
 type Task struct {
@@ -30,13 +28,22 @@ func AddTask(task *Task) (int64, error) {
 	return id, err
 }
 
-func Tasks(limit int) ([]*Task, error) {
+func Tasks(limit int, search string) ([]*Task, error) {
 	var tasks []*Task
+	var rows *sql.Rows
+	var err error
+	switch search {
+	case "":
+		query := `SELECT id, date, title, comment, repeat FROM scheduler order by date LIMIT :limit`
+		rows, err = DB.Query(query,
+			sql.Named("limit", limit))
+	default:
+		query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE :search OR comment LIKE :search OR date LIKE :search ORDER BY date LIMIT :limit`
+		rows, err = DB.Query(query,
+			sql.Named("search", "%"+search+"%"),
+			sql.Named("limit", limit))
+	}
 
-	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date >= :date order by date LIMIT :limit`
-	rows, err := DB.Query(query,
-		sql.Named("date", time.Now().Format(task.DateFormat)),
-		sql.Named("limit", limit))
 	if err != nil {
 		return nil, fmt.Errorf("query execute error: %v", err)
 	}

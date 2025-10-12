@@ -3,7 +3,9 @@ package api
 import (
 	"log"
 	"net/http"
+	"time"
 	"yandex_final_project/pkg/db"
+	"yandex_final_project/pkg/task"
 )
 
 type TasksResp struct {
@@ -11,10 +13,13 @@ type TasksResp struct {
 }
 
 func tasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
-	tasks, err := db.Tasks(50) // в параметре максимальное количество записей
+	search := req.URL.Query().Get("search")
+	searchDate, err := time.Parse("02.01.2006", search)
+	if err == nil {
+		search = searchDate.Format(task.DateFormat)
+	}
+	tasks, err := db.Tasks(50, search) // в параметре максимальное количество записей
 	if err != nil {
-		// здесь вызываете функцию, которая возвращает ошибку в JSON
-		// её желательно было реализовать на предыдущем шаге
 		errText := "ошибка при получении записей"
 		logger.Printf("%s: %v", errText, err)
 		jsonError(res, errText, logger)

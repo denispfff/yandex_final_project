@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -13,7 +14,6 @@ func writeJson(res http.ResponseWriter, data any, logger *log.Logger) {
 	err := json.NewEncoder(res).Encode(data)
 	if err != nil {
 		logger.Printf("ошибка при сериализации ответа: %v", err)
-
 	}
 }
 
@@ -21,8 +21,47 @@ func jsonError(res http.ResponseWriter, errText string, logger *log.Logger) {
 	errorResponse := map[string]string{
 		"error": errText,
 	}
-	res.WriteHeader(http.StatusBadRequest)
 	writeJson(res, errorResponse, logger)
+}
+
+func processTask(newTask *db.Task) error {
+	todayString := time.Now().Format(task.DateFormat)
+	today, err := time.Parse(task.DateFormat, todayString)
+	if err != nil {
+		errText := "что-то с текущим временем на сервере"
+		return fmt.Errorf("%s: %w", errText, err)
+	}
+
+	if newTask.Date == "" {
+		newTask.Date = todayString
+	}
+
+	dateString, err := time.Parse(task.DateFormat, newTask.Date)
+	if err != nil {
+		errText := "invalid date format "
+		return fmt.Errorf("%s: %w", errText, err)
+	}
+
+	if newTask.Repeat == "" {
+		if dateString.Before(today) {
+			newTask.Date = todayString
+		}
+	} else {
+		next, err := task.NextDate(today, newTask.Date, newTask.Repeat)
+		if err != nil {
+			errText := "invalid format "
+			return fmt.Errorf("%s: %w", errText, err)
+		}
+
+		if task.AfterNow(today, dateString) {
+			if len(newTask.Repeat) == 0 {
+				newTask.Date = todayString
+			} else {
+				newTask.Date = next
+			}
+		}
+	}
+	return nil
 }
 
 func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -32,22 +71,13 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 
 	body := req.Body
 	defer body.Close()
-	// Сразу просчитываем текущую дату, отбрасывая время для дальнейшей логики
-	todayString := time.Now().Format(task.DateFormat)
-	today, err := time.Parse(task.DateFormat, time.Now().Format(task.DateFormat))
 
-	if err != nil {
-		errText := "что-то с текущим временем на сервере"
-		logger.Printf("%s: %v", errText, err)
-		jsonError(res, errText, logger)
-		return
-	}
-
-	err = json.NewDecoder(body).Decode(&newTask)
+	err := json.NewDecoder(body).Decode(&newTask)
 	if err != nil {
 		errText := "ошибка десериализации JSON"
 		logger.Printf("%s: %v", errText, err)
 		jsonError(res, errText, logger)
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -55,66 +85,24 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		errText := "не указан заголовок задачи"
 		logger.Printf("%s", errText)
 		jsonError(res, errText, logger)
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if newTask.Date == "" {
-		newTask.Date = todayString
+	err = processTask(&newTask)
+	if err != nil {
+		logger.Println(err)
+		jsonError(res, err.Error(), logger)
+		res.WriteHeader(http.StatusBadRequest)
+		return
 	}
-
-	// Для таски без указания времени повторения -
-	if newTask.Repeat == "" {
-		date, err := time.Parse(task.DateFormat, newTask.Date)
-		if err != nil {
-			errText := "invalid date format "
-			logger.Printf("%s, %v", errText, err)
-			jsonError(res, errText, logger)
-			return
-		}
-
-		if date.Before(today) {
-			newTask.Date = todayString
-		}
-	} else {
-		newTask.Date, err = task.NextDate(today, newTask.Date, newTask.Repeat)
-		if err != nil {
-			errText := "invalid format "
-			logger.Printf("%s: %v", errText, err)
-			jsonError(res, errText, logger)
-			return
-		}
-
-		if newTask.Repeat != "" {
-			newTask.Date, err = task.NextDate(today, newTask.Date, newTask.Repeat)
-			if err != nil {
-				errText := "invalid format "
-				logger.Printf("%s: %v", errText, err)
-				jsonError(res, errText, logger)
-				return
-			}
-		} else {
-			date, err := time.Parse(task.DateFormat, newTask.Date)
-			if err != nil {
-				errText := "invalid date format "
-				logger.Printf("%s, %v", errText, err)
-				jsonError(res, errText, logger)
-				return
-			}
-
-			if date.Before(today) {
-				newTask.Date = todayString
-			}
-		}
-
-		//
-	}
-
 	id, err := db.AddTask(&newTask)
 
 	if err != nil {
 		errText := "db add task error"
 		logger.Printf("%s: %v", errText, err)
 		jsonError(res, errText, logger)
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

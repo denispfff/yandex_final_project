@@ -8,19 +8,21 @@ import (
 )
 
 func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+
 	if req.Method != http.MethodGet {
 		errText := "Method not allowed"
 		http.Error(res, errText, http.StatusMethodNotAllowed)
 		return
 	}
 
+	res.Header().Set("Content-Type", "text/plain; charset=utf8")
 	now := req.FormValue("now")
 	date := req.FormValue("date")
 	repeat := req.FormValue("repeat")
 
 	nowDate, err := time.Parse(task.DateFormat, now)
 	if err != nil {
-		errText := "Invalid date format"
+		errText := "invalid date format"
 		logger.Printf("%s: %v", errText, err)
 		http.Error(res, errText, http.StatusBadRequest)
 		return
@@ -28,14 +30,12 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	nextDate, err := task.NextDate(nowDate, date, repeat)
 
 	if err != nil {
-		errText := "Invalid repeat rule"
+		errText := "invalid repeat rule"
 		logger.Printf("%s: %v", errText, err)
 		http.Error(res, errText, http.StatusBadRequest)
 		return
 	}
 
-	res.Header().Set("Content-Type", "text/plain; charset=utf8")
-	res.WriteHeader(http.StatusOK)
 	_, err = res.Write([]byte(nextDate))
 
 	if err != nil {
@@ -44,6 +44,8 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		http.Error(res, errText, http.StatusInternalServerError)
 		return
 	}
+	// Оказывается, Write автоматически записывает 200
+	// res.WriteHeader(http.StatusOK)
 }
 
 func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {

@@ -44,8 +44,6 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		http.Error(res, errText, http.StatusInternalServerError)
 		return
 	}
-	// Оказывается, Write автоматически записывает 200
-	// res.WriteHeader(http.StatusOK)
 }
 
 func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -55,8 +53,8 @@ func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger)
 		addTaskHandler(res, req, logger)
 	default:
 		errText := "Method Not Allowed"
-		jsonError(res, errText, logger)
 		res.WriteHeader(http.StatusMethodNotAllowed)
+		jsonError(res, errText, logger)
 	}
 }
 
@@ -66,7 +64,7 @@ func TasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger
 		tasksHandler(res, req, logger)
 	default:
 		errText := "method not allowed"
-		jsonError(res, errText, logger)
 		res.WriteHeader(http.StatusMethodNotAllowed)
+		jsonError(res, errText, logger)
 	}
 }

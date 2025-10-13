@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS scheduler (
 	);
 
 CREATE INDEX scheduler_date ON scheduler (date);
+CREATE INDEX scheduler_title ON scheduler (title);
+CREATE INDEX scheduler_comment ON scheduler (comment);
 `
 
 var DB *sql.DB

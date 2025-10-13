@@ -28,19 +28,28 @@ func AddTask(task *Task) (int64, error) {
 	return id, err
 }
 
-func Tasks(limit int, search string) ([]*Task, error) {
+func Tasks(limit int, search string, date string) ([]*Task, error) {
 	var tasks []*Task
 	var rows *sql.Rows
 	var err error
-	switch search {
-	case "":
+	// Ради производительности разбил на 3 кейса, должно быть быстрее
+	// Т.К. производится поиск по столбцам - проиндексировал их
+	switch {
+	case date != "":
+		query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE :search OR comment LIKE :search OR date = :date ORDER BY date LIMIT :limit`
+		rows, err = DB.Query(query,
+			sql.Named("search", "%"+search+"%"), // а вдруг ищем дату там в исходном форматировании
+			sql.Named("date", date),
+			sql.Named("limit", limit))
+	case search != "":
+		query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE LOWER(title) LIKE LOWER(?) OR LOWER(comment) LIKE LOWER(?) ORDER BY date LIMIT ?`
+		rows, err = DB.Query(query,
+			"%"+search+"%",
+			"%"+search+"%",
+			limit)
+	default:
 		query := `SELECT id, date, title, comment, repeat FROM scheduler order by date LIMIT :limit`
 		rows, err = DB.Query(query,
-			sql.Named("limit", limit))
-	default:
-		query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE :search OR comment LIKE :search OR date LIKE :search ORDER BY date LIMIT :limit`
-		rows, err = DB.Query(query,
-			sql.Named("search", "%"+search+"%"),
 			sql.Named("limit", limit))
 	}
 

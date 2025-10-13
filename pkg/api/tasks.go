@@ -13,12 +13,17 @@ type TasksResp struct {
 }
 
 func tasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	var limit int = 50
+	var searchDate string
+
 	search := req.URL.Query().Get("search")
-	searchDate, err := time.Parse("02.01.2006", search)
-	if err == nil {
-		search = searchDate.Format(task.DateFormat)
+	if search != "" {
+		date, err := time.Parse("02.01.2006", search)
+		if err == nil {
+			searchDate = date.Format(task.DateFormat)
+		}
 	}
-	tasks, err := db.Tasks(50, search) // в параметре максимальное количество записей
+	tasks, err := db.Tasks(limit, search, searchDate)
 	if err != nil {
 		errText := "ошибка при получении записей"
 		logger.Printf("%s: %v", errText, err)

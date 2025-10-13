@@ -12,7 +12,7 @@ func main() {
 	mainLogger := log.New(
 		os.Stdout,
 		"server: ",
-		log.Lshortfile,
+		log.LstdFlags|log.Lshortfile,
 	)
 
 	port, ok := os.LookupEnv("TODO_PORT")

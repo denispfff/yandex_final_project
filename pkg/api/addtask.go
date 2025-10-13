@@ -14,6 +14,7 @@ func writeJson(res http.ResponseWriter, data any, logger *log.Logger) {
 	err := json.NewEncoder(res).Encode(data)
 	if err != nil {
 		logger.Printf("ошибка при сериализации ответа: %v", err)
+		http.Error(res, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
@@ -76,24 +77,24 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "ошибка десериализации JSON"
 		logger.Printf("%s: %v", errText, err)
-		jsonError(res, errText, logger)
 		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	if newTask.Title == "" {
 		errText := "не указан заголовок задачи"
 		logger.Printf("%s", errText)
-		jsonError(res, errText, logger)
 		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	err = processTask(&newTask)
 	if err != nil {
 		logger.Println(err)
-		jsonError(res, err.Error(), logger)
 		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, err.Error(), logger)
 		return
 	}
 	id, err := db.AddTask(&newTask)
@@ -101,15 +102,14 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "db add task error"
 		logger.Printf("%s: %v", errText, err)
-		jsonError(res, errText, logger)
 		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	response := map[string]int64{
 		"id": id,
 	}
-
-	writeJson(res, response, logger)
 	res.WriteHeader(http.StatusCreated)
+	writeJson(res, response, logger)
 }

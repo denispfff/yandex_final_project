@@ -49,8 +49,12 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	switch req.Method {
 	//other methods
+	case http.MethodGet:
+		getTaskHandler(res, req, logger)
 	case http.MethodPost:
 		addTaskHandler(res, req, logger)
+	case http.MethodPut:
+		putTaskHandler(res, req, logger)
 	default:
 		errText := "Method Not Allowed"
 		res.WriteHeader(http.StatusMethodNotAllowed)

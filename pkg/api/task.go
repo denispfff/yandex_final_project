@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 	"yandex_final_project/pkg/db"
 	"yandex_final_project/pkg/task"
@@ -112,4 +113,86 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	}
 	res.WriteHeader(http.StatusCreated)
 	writeJson(res, response, logger)
+}
+
+func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	taskID := req.URL.Query().Get("id")
+	if taskID == "" {
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, "Не указан идентификатор", logger)
+		return
+	}
+
+	intID, err := strconv.Atoi(taskID)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, "Invalid id", logger)
+		return
+	}
+
+	task, err := db.GetTask(intID)
+	if err != nil {
+		res.WriteHeader(http.StatusNotFound)
+		jsonError(res, "Задача не найдена", logger)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	writeJson(res, task, logger)
+}
+
+func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	res.Header().Set("Content-Type", "application/json")
+
+	var task db.Task
+
+	body := req.Body
+	defer body.Close()
+
+	err := json.NewDecoder(body).Decode(&task)
+	if err != nil {
+		errText := "ошибка десериализации JSON"
+		logger.Printf("%s: %v", errText, err)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
+		return
+	}
+
+	if task.Title == "" {
+		errText := "не указан заголовок задачи"
+		logger.Printf("%s", errText)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, errText, logger)
+		return
+	}
+
+	err = processTask(&task)
+	if err != nil {
+		logger.Println(err)
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, err.Error(), logger)
+		return
+	}
+
+	err = db.UpdateTask(&task)
+
+	if err != nil {
+		errText := "db update task error"
+		logger.Printf("%s: %v", errText, err)
+		res.WriteHeader(http.StatusNotFound)
+		jsonError(res, errText, logger)
+		return
+	}
+
+	response := "{}"
+	res.WriteHeader(http.StatusOK)
+	_, err = res.Write([]byte(response))
+
+	if err != nil {
+		errText := "Respone write error"
+		logger.Printf("%s: %v", errText, err)
+		res.WriteHeader(http.StatusInternalServerError)
+		jsonError(res, err.Error(), logger)
+		return
+	}
 }

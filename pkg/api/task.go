@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,46 +23,6 @@ func jsonError(res http.ResponseWriter, errText string, logger *log.Logger) {
 		"error": errText,
 	}
 	writeJson(res, errorResponse, logger)
-}
-
-func processTask(newTask *db.Task) error {
-	todayString := time.Now().Format(nextdate.DateFormat)
-	today, err := time.Parse(nextdate.DateFormat, todayString)
-	if err != nil {
-		errText := "что-то с текущим временем на сервере"
-		return fmt.Errorf("%s: %w", errText, err)
-	}
-
-	if newTask.Date == "" {
-		newTask.Date = todayString
-	}
-
-	dateString, err := time.Parse(nextdate.DateFormat, newTask.Date)
-	if err != nil {
-		errText := "invalid date format "
-		return fmt.Errorf("%s: %w", errText, err)
-	}
-
-	if newTask.Repeat == "" {
-		if dateString.Before(today) {
-			newTask.Date = todayString
-		}
-	} else {
-		next, err := nextdate.NextDate(today, newTask.Date, newTask.Repeat)
-		if err != nil {
-			errText := "invalid format "
-			return fmt.Errorf("%s: %w", errText, err)
-		}
-
-		if nextdate.AfterNow(today, dateString) {
-			if len(newTask.Repeat) == 0 {
-				newTask.Date = todayString
-			} else {
-				newTask.Date = next
-			}
-		}
-	}
-	return nil
 }
 
 func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -89,7 +48,7 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		return
 	}
 
-	err = processTask(&newTask)
+	err = nextdate.ValidateTask(&newTask)
 	if err != nil {
 		logger.Println(err)
 		res.WriteHeader(http.StatusBadRequest)
@@ -162,7 +121,7 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		return
 	}
 
-	err = processTask(&task)
+	err = nextdate.ValidateTask(&task)
 	if err != nil {
 		logger.Println(err)
 		res.WriteHeader(http.StatusBadRequest)

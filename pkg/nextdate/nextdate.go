@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"yandex_final_project/pkg/db"
 )
 
 const DateFormat = "20060102"
@@ -120,4 +122,45 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	}
 
 	return nextTime.Format("20060102"), nil
+}
+
+// Функция проверят задачу на соответствие правилам добавления\редактирования. При отсутствии даты - устанавливает текущую.
+func ValidateTask(newTask *db.Task) error {
+	todayString := time.Now().Format(DateFormat)
+	today, err := time.Parse(DateFormat, todayString)
+	if err != nil {
+		errText := "что-то с текущим временем на сервере"
+		return fmt.Errorf("%s: %w", errText, err)
+	}
+
+	if newTask.Date == "" {
+		newTask.Date = todayString
+	}
+
+	dateString, err := time.Parse(DateFormat, newTask.Date)
+	if err != nil {
+		errText := "invalid date format "
+		return fmt.Errorf("%s: %w", errText, err)
+	}
+
+	if newTask.Repeat == "" {
+		if dateString.Before(today) {
+			newTask.Date = todayString
+		}
+	} else {
+		next, err := NextDate(today, newTask.Date, newTask.Repeat)
+		if err != nil {
+			errText := "invalid format "
+			return fmt.Errorf("%s: %w", errText, err)
+		}
+
+		if AfterNow(today, dateString) {
+			if len(newTask.Repeat) == 0 {
+				newTask.Date = todayString
+			} else {
+				newTask.Date = next
+			}
+		}
+	}
+	return nil
 }

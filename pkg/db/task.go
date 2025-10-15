@@ -6,6 +6,9 @@ import (
 )
 
 type Task struct {
+	//Согласно требованиям к структуре и тестам ID - string, согласно требованиям к БД - ID - int
+	// 1 путь - привести к соотвествию структуру и БД (к интам) НО тогда валидация на ID будет на стороне БД
+	// 2 путь - оставить как есть с костылями strconv в процессе обработки post\get запросов
 	ID      string `json:"id" db:"id"`
 	Date    string `json:"date" db:"date"`
 	Title   string `json:"title" db:"title"`

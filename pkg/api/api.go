@@ -3,45 +3,18 @@ package api
 import (
 	"log"
 	"net/http"
-	"time"
-	"yandex_final_project/pkg/nextdate"
 )
 
 func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	res.Header().Set("Content-Type", "text/plain; charset=utf8")
 
-	if req.Method != http.MethodGet {
-		errText := "Method not allowed"
+	switch req.Method {
+	case http.MethodGet:
+		getNextDateHandler(res, req, logger)
+
+	default:
+		errText := "method not allowed"
 		http.Error(res, errText, http.StatusMethodNotAllowed)
-		return
-	}
-
-	now := req.FormValue("now")
-	date := req.FormValue("date")
-	repeat := req.FormValue("repeat")
-
-	nowDate, err := time.Parse(nextdate.DateFormat, now)
-	if err != nil {
-		errText := "invalid date format"
-		logger.Printf("%s: %v", errText, err)
-		http.Error(res, errText, http.StatusBadRequest)
-		return
-	}
-	nextDate, err := nextdate.NextDate(nowDate, date, repeat)
-
-	if err != nil {
-		errText := "invalid repeat rule"
-		logger.Printf("%s: %v", errText, err)
-		http.Error(res, errText, http.StatusBadRequest)
-		return
-	}
-
-	_, err = res.Write([]byte(nextDate))
-
-	if err != nil {
-		errText := "Respone write error"
-		logger.Printf("%s: %v", errText, err)
-		http.Error(res, errText, http.StatusInternalServerError)
 		return
 	}
 }

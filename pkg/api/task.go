@@ -40,14 +40,6 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		return
 	}
 
-	if newTask.Title == "" {
-		errText := "не указан заголовок задачи"
-		logger.Printf("%s", errText)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
-		return
-	}
-
 	err = nextdate.ValidateTask(&newTask)
 	if err != nil {
 		logger.Println(err)
@@ -55,8 +47,8 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		jsonError(res, err.Error(), logger)
 		return
 	}
-	id, err := db.AddTask(&newTask)
 
+	id, err := db.AddTask(&newTask)
 	if err != nil {
 		errText := "db add task error"
 		logger.Printf("%s: %v", errText, err)
@@ -75,20 +67,26 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	taskID := req.URL.Query().Get("id")
 	if taskID == "" {
+		errText := "не указан идентификатор"
+		logger.Println(errText)
 		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, "Не указан идентификатор", logger)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	intID, err := strconv.Atoi(taskID)
 	if err != nil {
+		errText := "некорректный id задачи"
+		logger.Printf("%s: %v", errText, err)
 		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, "Invalid id", logger)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	task, err := db.GetTask(intID)
 	if err != nil {
+		errText := "Задача не найдена"
+		logger.Printf("%s: %v", errText, err)
 		res.WriteHeader(http.StatusNotFound)
 		jsonError(res, "Задача не найдена", logger)
 		return
@@ -113,15 +111,8 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		return
 	}
 
-	if task.Title == "" {
-		errText := "не указан заголовок задачи"
-		logger.Printf("%s", errText)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
-		return
-	}
-
 	err = nextdate.ValidateTask(&task)
+
 	if err != nil {
 		logger.Println(err)
 		res.WriteHeader(http.StatusBadRequest)
@@ -149,13 +140,17 @@ func deleteTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.L
 	var err error
 	task.ID = req.URL.Query().Get("id")
 	if task.ID == "" {
+		errText := "не указан идентификатор"
+		logger.Println(errText)
 		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, "Не указан идентификатор", logger)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	err = db.DeleteTask(&task)
 	if err != nil {
+		errText := "db delete task error"
+		logger.Printf("%s: %v", errText, err)
 		res.WriteHeader(http.StatusInternalServerError)
 		jsonError(res, err.Error(), logger)
 		return
@@ -168,22 +163,28 @@ func deleteTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.L
 func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	taskID := req.URL.Query().Get("id")
 	if taskID == "" {
+		errText := "не указан идентификатор"
+		logger.Printf("%s", errText)
 		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, "Не указан идентификатор", logger)
+		jsonError(res, errText, logger)
 		return
 	}
 
 	intID, err := strconv.Atoi(taskID)
 	if err != nil {
+		errText := "некорректный id задачи"
+		logger.Printf("%s: %v", errText, err)
 		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, "Invalid id", logger)
+		jsonError(res, "errText", logger)
 		return
 	}
 
 	task, err := db.GetTask(intID)
 	if err != nil {
+		errText := "задача не найдена"
+		logger.Printf("%s: %v", errText, err)
 		res.WriteHeader(http.StatusNotFound)
-		jsonError(res, "Задача не найдена", logger)
+		jsonError(res, errText, logger)
 		return
 	}
 
@@ -191,14 +192,17 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	case "":
 		err = db.DeleteTask(task)
 		if err != nil {
+			errText := "db delete task error"
+			logger.Printf("%s: %v", errText, err)
 			res.WriteHeader(http.StatusInternalServerError)
-			jsonError(res, err.Error(), logger)
+			jsonError(res, errText, logger)
 			return
 		}
 
 	default:
 		task.Date, err = nextdate.NextDate(time.Now(), task.Date, task.Repeat)
 		if err != nil {
+			logger.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			jsonError(res, err.Error(), logger)
 			return
@@ -206,8 +210,10 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 
 		err = db.UpdateTask(task)
 		if err != nil {
+			errText := "ошибка обновления задачи в БД"
+			logger.Printf("%s: %v", errText, err)
 			res.WriteHeader(http.StatusNotModified)
-			jsonError(res, err.Error(), logger)
+			jsonError(res, errText, logger)
 			return
 		}
 	}

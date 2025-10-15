@@ -1,6 +1,7 @@
 package nextdate
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -124,17 +125,22 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	return nextTime.Format("20060102"), nil
 }
 
-// Функция проверят задачу на соответствие правилам добавления\редактирования. При отсутствии даты - устанавливает текущую.
+// Функция приводит задачу к правилам добавления\обновления
 func ValidateTask(newTask *db.Task) error {
 	todayString := time.Now().Format(DateFormat)
 	today, err := time.Parse(DateFormat, todayString)
+
+	if newTask.Date == "" {
+		newTask.Date = time.Now().Format(DateFormat)
+	}
+
+	if newTask.Title == "" {
+		errText := "не указан заголовок задачи"
+		return errors.New(errText)
+	}
 	if err != nil {
 		errText := "что-то с текущим временем на сервере"
 		return fmt.Errorf("%s: %w", errText, err)
-	}
-
-	if newTask.Date == "" {
-		newTask.Date = todayString
 	}
 
 	dateString, err := time.Parse(DateFormat, newTask.Date)

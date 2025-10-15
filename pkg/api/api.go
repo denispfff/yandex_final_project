@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"yandex_final_project/pkg/task"
+	"yandex_final_project/pkg/nextdate"
 )
 
 func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -20,14 +20,14 @@ func NextDateHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	date := req.FormValue("date")
 	repeat := req.FormValue("repeat")
 
-	nowDate, err := time.Parse(task.DateFormat, now)
+	nowDate, err := time.Parse(nextdate.DateFormat, now)
 	if err != nil {
 		errText := "invalid date format"
 		logger.Printf("%s: %v", errText, err)
 		http.Error(res, errText, http.StatusBadRequest)
 		return
 	}
-	nextDate, err := task.NextDate(nowDate, date, repeat)
+	nextDate, err := nextdate.NextDate(nowDate, date, repeat)
 
 	if err != nil {
 		errText := "invalid repeat rule"

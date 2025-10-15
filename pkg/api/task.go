@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 	"yandex_final_project/pkg/db"
-	"yandex_final_project/pkg/task"
+	"yandex_final_project/pkg/nextdate"
 )
 
 func writeJson(res http.ResponseWriter, data any, logger *log.Logger) {
@@ -27,8 +27,8 @@ func jsonError(res http.ResponseWriter, errText string, logger *log.Logger) {
 }
 
 func processTask(newTask *db.Task) error {
-	todayString := time.Now().Format(task.DateFormat)
-	today, err := time.Parse(task.DateFormat, todayString)
+	todayString := time.Now().Format(nextdate.DateFormat)
+	today, err := time.Parse(nextdate.DateFormat, todayString)
 	if err != nil {
 		errText := "что-то с текущим временем на сервере"
 		return fmt.Errorf("%s: %w", errText, err)
@@ -38,7 +38,7 @@ func processTask(newTask *db.Task) error {
 		newTask.Date = todayString
 	}
 
-	dateString, err := time.Parse(task.DateFormat, newTask.Date)
+	dateString, err := time.Parse(nextdate.DateFormat, newTask.Date)
 	if err != nil {
 		errText := "invalid date format "
 		return fmt.Errorf("%s: %w", errText, err)
@@ -49,13 +49,13 @@ func processTask(newTask *db.Task) error {
 			newTask.Date = todayString
 		}
 	} else {
-		next, err := task.NextDate(today, newTask.Date, newTask.Repeat)
+		next, err := nextdate.NextDate(today, newTask.Date, newTask.Repeat)
 		if err != nil {
 			errText := "invalid format "
 			return fmt.Errorf("%s: %w", errText, err)
 		}
 
-		if task.AfterNow(today, dateString) {
+		if nextdate.AfterNow(today, dateString) {
 			if len(newTask.Repeat) == 0 {
 				newTask.Date = todayString
 			} else {
@@ -193,6 +193,62 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		logger.Printf("%s: %v", errText, err)
 		res.WriteHeader(http.StatusInternalServerError)
 		jsonError(res, err.Error(), logger)
+		return
+	}
+}
+
+func DoneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	res.Header().Set("Content-Type", "application/json")
+
+	taskID := req.URL.Query().Get("id")
+	if taskID == "" {
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, "Не указан идентификатор", logger)
+		return
+	}
+
+	intID, err := strconv.Atoi(taskID)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, "Invalid id", logger)
+		return
+	}
+
+	task, err := db.GetTask(intID)
+	if err != nil {
+		res.WriteHeader(http.StatusNotFound)
+		jsonError(res, "Задача не найдена", logger)
+		return
+	}
+
+	if task.Repeat == "" {
+		err = db.DeleteTask(task)
+		if err != nil {
+			res.WriteHeader(http.StatusInternalServerError)
+			jsonError(res, err.Error(), logger)
+			return
+		}
+	} else {
+		task.Date, err = nextdate.NextDate(time.Now(), task.Date, task.Repeat)
+		if err != nil {
+			res.WriteHeader(http.StatusInternalServerError)
+			jsonError(res, err.Error(), logger)
+			return
+		}
+
+		err = db.UpdateTask(task)
+		if err != nil {
+			res.WriteHeader(http.StatusNotModified)
+			jsonError(res, err.Error(), logger)
+			return
+		}
+
+		response := "{}"
+		res.WriteHeader(http.StatusOK)
+		_, err = res.Write([]byte(response))
+		if err != nil {
+			jsonError(res, err.Error(), logger)
+		}
 		return
 	}
 }

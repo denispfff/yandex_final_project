@@ -6,7 +6,7 @@ import (
 )
 
 type Task struct {
-	ID      string `json:"id" db:"id"`
+	ID      int    `json:"id" db:"id"`
 	Date    string `json:"date" db:"date"`
 	Title   string `json:"title" db:"title"`
 	Comment string `json:"comment" db:"comment"`
@@ -105,6 +105,24 @@ func UpdateTask(task *Task) error {
 
 	if count == 0 {
 		return fmt.Errorf("nothing changed")
+	}
+
+	return nil
+}
+
+func DeleteTask(task *Task) error {
+	query := `DELETE FROM scheduler WHERE id = :id`
+	res, err := DB.Exec(query,
+		sql.Named("id", task.ID))
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("nothing deleted")
 	}
 
 	return nil

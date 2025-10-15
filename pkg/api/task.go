@@ -183,13 +183,6 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	res.WriteHeader(http.StatusOK)
 	writeJson(res, nil, logger)
 
-	if err != nil {
-		errText := "Respone write error"
-		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusInternalServerError)
-		jsonError(res, err.Error(), logger)
-		return
-	}
 }
 
 func deleteTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {

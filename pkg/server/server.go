@@ -22,6 +22,7 @@ func New(logger *log.Logger, port string) *Server {
 	mux.HandleFunc("/api/nextdate", func(w http.ResponseWriter, r *http.Request) { api.NextDateHandler(w, r, logger) })
 	mux.HandleFunc("/api/task", func(w http.ResponseWriter, r *http.Request) { api.TaskHandler(w, r, logger) })
 	mux.HandleFunc("/api/tasks", func(w http.ResponseWriter, r *http.Request) { api.TasksHandler(w, r, logger) })
+	mux.HandleFunc("/api/task/done", func(w http.ResponseWriter, r *http.Request) { api.DoneTasksHandler(w, r, logger) })
 
 	server := &http.Server{
 		Addr:         ":" + port,

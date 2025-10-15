@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 	"yandex_final_project/pkg/db"
-	"yandex_final_project/pkg/task"
+	"yandex_final_project/pkg/nextdate"
 )
 
 type TasksResp struct {
@@ -20,7 +20,7 @@ func tasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger
 	if search != "" {
 		date, err := time.Parse("02.01.2006", search)
 		if err == nil {
-			searchDate = date.Format(task.DateFormat)
+			searchDate = date.Format(nextdate.DateFormat)
 		}
 	}
 	tasks, err := db.Tasks(limit, search, searchDate)

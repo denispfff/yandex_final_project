@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -40,7 +41,9 @@ func TestDone(t *testing.T) {
 	})
 
 	for i := 0; i < 3; i++ {
+		fmt.Println("api/task/done?id=" + id)
 		ret, err := postJSON("api/task/done?id="+id, nil, http.MethodPost)
+		fmt.Println(ret, err)
 		assert.NoError(t, err)
 		assert.Empty(t, ret)
 

@@ -67,8 +67,6 @@ func processTask(newTask *db.Task) error {
 }
 
 func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
-	res.Header().Set("Content-Type", "application/json")
-
 	var newTask db.Task
 
 	body := req.Body
@@ -142,8 +140,6 @@ func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 }
 
 func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
-	res.Header().Set("Content-Type", "application/json")
-
 	var task db.Task
 
 	body := req.Body
@@ -184,9 +180,8 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 		return
 	}
 
-	response := "{}"
 	res.WriteHeader(http.StatusOK)
-	_, err = res.Write([]byte(response))
+	writeJson(res, nil, logger)
 
 	if err != nil {
 		errText := "Respone write error"
@@ -197,9 +192,28 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	}
 }
 
-func DoneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
-	res.Header().Set("Content-Type", "application/json")
+func deleteTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
+	task := db.Task{}
+	var err error
+	task.ID = req.URL.Query().Get("id")
+	if task.ID == "" {
+		res.WriteHeader(http.StatusBadRequest)
+		jsonError(res, "Не указан идентификатор", logger)
+		return
+	}
 
+	err = db.DeleteTask(&task)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		jsonError(res, err.Error(), logger)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	writeJson(res, nil, logger)
+}
+
+func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
 	taskID := req.URL.Query().Get("id")
 	if taskID == "" {
 		res.WriteHeader(http.StatusBadRequest)
@@ -221,14 +235,16 @@ func DoneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		return
 	}
 
-	if task.Repeat == "" {
+	switch task.Repeat {
+	case "":
 		err = db.DeleteTask(task)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			jsonError(res, err.Error(), logger)
 			return
 		}
-	} else {
+
+	default:
 		task.Date, err = nextdate.NextDate(time.Now(), task.Date, task.Repeat)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
@@ -242,13 +258,7 @@ func DoneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 			jsonError(res, err.Error(), logger)
 			return
 		}
-
-		response := "{}"
-		res.WriteHeader(http.StatusOK)
-		_, err = res.Write([]byte(response))
-		if err != nil {
-			jsonError(res, err.Error(), logger)
-		}
-		return
 	}
+	res.WriteHeader(http.StatusOK)
+	writeJson(res, nil, logger)
 }

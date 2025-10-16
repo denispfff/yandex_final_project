@@ -27,12 +27,19 @@ func tasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger
 	if err != nil {
 		errText := "ошибка при получении записей"
 		logger.Printf("%s: %v", errText, err)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusInternalServerError)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
 	if tasks == nil {
 		tasks = []*db.Task{}
 	}
-	writeJson(res, TasksResp{Tasks: tasks}, logger)
+
+	err = writeJson(res, TasksResp{Tasks: tasks}, http.StatusOK)
+	if err != nil {
+		logger.Println(err)
+	}
 }

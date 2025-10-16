@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,19 +11,42 @@ import (
 	"yandex_final_project/pkg/nextdate"
 )
 
-func writeJson(res http.ResponseWriter, data any, logger *log.Logger) {
-	err := json.NewEncoder(res).Encode(data)
+func writeJson(res http.ResponseWriter, data any, status int) error {
+	js, err := json.Marshal(data)
 	if err != nil {
-		logger.Printf("ошибка при сериализации ответа: %v", err)
-		http.Error(res, "Internal Server Error", http.StatusInternalServerError)
+		errorText := fmt.Sprintf("ошибка при сериализации ответа: %v", err)
+		anotherErr := jsonError(res, errorText, http.StatusInternalServerError)
+		if anotherErr != nil {
+			return fmt.Errorf("%v, %v", err, anotherErr)
+		}
+		return err
 	}
+
+	res.WriteHeader(status)
+	_, err = res.Write(js)
+	// если соединение оборвано - вернуть пользователю уже ничего не сможем
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func jsonError(res http.ResponseWriter, errText string, logger *log.Logger) {
-	errorResponse := map[string]string{
+func jsonError(res http.ResponseWriter, errText string, status int) error {
+	data := map[string]string{
 		"error": errText,
 	}
-	writeJson(res, errorResponse, logger)
+
+	js, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	res.WriteHeader(status)
+	_, err = res.Write(js)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -35,16 +59,20 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "ошибка десериализации JSON"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err = jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
 	err = nextdate.ValidateTask(&newTask)
 	if err != nil {
 		logger.Println(err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, err.Error(), logger)
+		err = jsonError(res, err.Error(), http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -52,16 +80,21 @@ func addTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "db add task error"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err = jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
 	response := map[string]int64{
 		"id": id,
 	}
-	res.WriteHeader(http.StatusCreated)
-	writeJson(res, response, logger)
+
+	err = writeJson(res, response, http.StatusCreated)
+	if err != nil {
+		logger.Println(err)
+	}
 }
 
 func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -69,8 +102,10 @@ func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if taskID == "" {
 		errText := "не указан идентификатор"
 		logger.Println(errText)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -78,8 +113,10 @@ func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "некорректный id задачи"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -87,13 +124,17 @@ func getTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "Задача не найдена"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusNotFound)
-		jsonError(res, "Задача не найдена", logger)
+		err := jsonError(res, errText, http.StatusNotFound)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
-	res.WriteHeader(http.StatusOK)
-	writeJson(res, task, logger)
+	err = writeJson(res, task, http.StatusOK)
+	if err != nil {
+		logger.Println(err)
+	}
 }
 
 func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -106,8 +147,10 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "ошибка десериализации JSON"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -115,8 +158,10 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 
 	if err != nil {
 		logger.Println(err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, err.Error(), logger)
+		err := jsonError(res, err.Error(), http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -125,13 +170,17 @@ func putTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logg
 	if err != nil {
 		errText := "db update task error"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusNotFound)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusNotFound)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
-	res.WriteHeader(http.StatusOK)
-	writeJson(res, nil, logger)
+	err = writeJson(res, struct{}{}, http.StatusOK)
+	if err != nil {
+		logger.Println(err)
+	}
 
 }
 
@@ -142,8 +191,10 @@ func deleteTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.L
 	if task.ID == "" {
 		errText := "не указан идентификатор"
 		logger.Println(errText)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -151,13 +202,18 @@ func deleteTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.L
 	if err != nil {
 		errText := "db delete task error"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusInternalServerError)
-		jsonError(res, err.Error(), logger)
+		err := jsonError(res, errText, http.StatusInternalServerError)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
-	res.WriteHeader(http.StatusOK)
-	writeJson(res, nil, logger)
+	err = writeJson(res, struct{}{}, http.StatusOK)
+	if err != nil {
+		logger.Println(err)
+	}
+
 }
 
 func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger) {
@@ -165,8 +221,10 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	if taskID == "" {
 		errText := "не указан идентификатор"
 		logger.Printf("%s", errText)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -174,8 +232,10 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	if err != nil {
 		errText := "некорректный id задачи"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusBadRequest)
-		jsonError(res, "errText", logger)
+		err := jsonError(res, errText, http.StatusBadRequest)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -183,8 +243,10 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	if err != nil {
 		errText := "задача не найдена"
 		logger.Printf("%s: %v", errText, err)
-		res.WriteHeader(http.StatusNotFound)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusNotFound)
+		if err != nil {
+			logger.Println(err)
+		}
 		return
 	}
 
@@ -194,8 +256,10 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		if err != nil {
 			errText := "db delete task error"
 			logger.Printf("%s: %v", errText, err)
-			res.WriteHeader(http.StatusInternalServerError)
-			jsonError(res, errText, logger)
+			err := jsonError(res, errText, http.StatusInternalServerError)
+			if err != nil {
+				logger.Println(err)
+			}
 			return
 		}
 
@@ -203,8 +267,10 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		task.Date, err = nextdate.NextDate(time.Now(), task.Date, task.Repeat)
 		if err != nil {
 			logger.Println(err)
-			res.WriteHeader(http.StatusInternalServerError)
-			jsonError(res, err.Error(), logger)
+			err := jsonError(res, err.Error(), http.StatusInternalServerError)
+			if err != nil {
+				logger.Println(err)
+			}
 			return
 		}
 
@@ -212,11 +278,17 @@ func doneTaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 		if err != nil {
 			errText := "ошибка обновления задачи в БД"
 			logger.Printf("%s: %v", errText, err)
-			res.WriteHeader(http.StatusNotModified)
-			jsonError(res, errText, logger)
+			err := jsonError(res, errText, http.StatusNotModified)
+			if err != nil {
+				logger.Println(err)
+			}
 			return
 		}
 	}
-	res.WriteHeader(http.StatusOK)
-	writeJson(res, nil, logger)
+
+	err = writeJson(res, struct{}{}, http.StatusOK)
+	if err != nil {
+		logger.Println(err)
+	}
+
 }

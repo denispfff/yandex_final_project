@@ -34,8 +34,10 @@ func TaskHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger)
 		deleteTaskHandler(res, req, logger)
 	default:
 		errText := "Method Not Allowed"
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		jsonError(res, errText, logger)
+		err := jsonError(res, errText, http.StatusMethodNotAllowed)
+		if err != nil {
+			logger.Println(err)
+		}
 	}
 }
 
@@ -46,9 +48,11 @@ func TasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Logger
 	case http.MethodGet:
 		tasksHandler(res, req, logger)
 	default:
-		errText := "method not allowed"
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		jsonError(res, errText, logger)
+		errText := "Method Not Allowed"
+		err := jsonError(res, errText, http.StatusMethodNotAllowed)
+		if err != nil {
+			logger.Println(err)
+		}
 	}
 }
 
@@ -59,9 +63,11 @@ func AddTasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Log
 	case http.MethodGet:
 		tasksHandler(res, req, logger)
 	default:
-		errText := "method not allowed"
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		jsonError(res, errText, logger)
+		errText := "Method Not Allowed"
+		err := jsonError(res, errText, http.StatusMethodNotAllowed)
+		if err != nil {
+			logger.Println(err)
+		}
 	}
 }
 
@@ -72,8 +78,10 @@ func DoneTasksHandler(res http.ResponseWriter, req *http.Request, logger *log.Lo
 	case http.MethodPost:
 		doneTaskHandler(res, req, logger)
 	default:
-		errText := "method not allowed"
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		jsonError(res, errText, logger)
+		errText := "Method Not Allowed"
+		err := jsonError(res, errText, http.StatusMethodNotAllowed)
+		if err != nil {
+			logger.Println(err)
+		}
 	}
 }

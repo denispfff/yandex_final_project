@@ -15,20 +15,8 @@ func main() {
 		log.LstdFlags|log.Lshortfile,
 	)
 
-	port, ok := os.LookupEnv("TODO_PORT")
-	if !ok || len(port) == 0 {
-		port = "7540"
-	}
-
-	dbFile, ok := os.LookupEnv("TODO_DBFILE")
-	if !ok || len(dbFile) == 0 {
-		dbFile = "scheduler.db"
-	}
-
-	db.Init(dbFile)
+	srv := server.New(mainLogger)
 	defer db.DB.Close()
-
-	srv := server.New(mainLogger, port)
 
 	if err := srv.HttpServer.ListenAndServe(); err != nil {
 		mainLogger.Fatal(err)

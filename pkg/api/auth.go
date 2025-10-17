@@ -12,7 +12,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const secretKey = "asddsaasdasd"
+// в беклог - вынести в ENV?
+const secretKey = "my_secret_word"
 
 var secretMethod = *jwt.SigningMethodHS256
 

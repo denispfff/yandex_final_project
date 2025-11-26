@@ -26,8 +26,39 @@ jobs:
 
     - name: Run local server
       run: |
-        CGO_ENABLED=0 GOOS=linux go run main.go &
+        CGO_ENABLED=0 GOOS=linux go run ./cmd/main.go &
         sleep 100
         go test -run ^TestApp$ ./tests
+
         
-        
+  deploy:
+    name: Push Docker image to Docker Hub
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      - name: Extract metadata for docker
+        id: metadata
+        uses: docker/metadata-action@v5.5.1
+        with:
+          images: panfilovd/ya_task_scheduler
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
